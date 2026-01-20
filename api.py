@@ -45,6 +45,9 @@ class ContentRequest(BaseModel):
     topic: str
     length: str = None
 
+class GeoSyncRequest(BaseModel):
+    location: str
+
 class JobSearchRequest(BaseModel):
     query: str
 
@@ -118,6 +121,13 @@ async def generate_content(req: ContentRequest):
     if not content:
         raise HTTPException(status_code=500, detail="Content generation failed")
     return {"content": content}
+
+@app.post("/api/geo/sync")
+async def sync_geo(req: GeoSyncRequest):
+    data = clone.sync_geo(req.location)
+    if not data:
+        raise HTTPException(status_code=500, detail="Geo sync failed")
+    return data
 
 @app.post("/api/jobs/search")
 async def search_jobs(req: JobSearchRequest):

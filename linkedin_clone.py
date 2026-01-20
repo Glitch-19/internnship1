@@ -492,6 +492,38 @@ class LinkedInClone:
         rows = cursor.fetchall()
         conn.close()
         return [{"name": r[0], "photo_url": r[1], "headline": r[2], "id": r[3]} for r in rows]
+    def sync_geo(self, location):
+        """
+        Retrieves details about a place and generates neural grid coordinates.
+        """
+        print(f"--- Synchronizing Geo-Location: {location} ---")
+        prompt = f"""
+        Provide detailed professional information about '{location}'. 
+        Also, provide its approximate latitude and longitude coordinates.
+        Output MUST be in valid JSON format:
+        {{
+            "location": "{location}",
+            "description": "2-3 sentences about its professional or tech significance",
+            "lat": float,
+            "lon": float
+        }}
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a geospatial neural assistant. Output valid JSON only."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+            data = json.loads(response.choices[0].message.content)
+            data["type"] = "geo"
+            return data
+        except Exception as e:
+            print(f"Error in geo sync: {e}")
+            return None
+
     def generate_content(self, content_type, topic, length=None):
         """
         Generates LinkedIn content like posts, polls, newsletters, blogs, or event descriptions.

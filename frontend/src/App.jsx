@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { User, Share2, Search, Zap, Terminal, Activity, Globe, Info, Cpu, Sparkles, Camera, Upload, Briefcase, Building2, MapPin, DollarSign, Bookmark, Heart, LayoutDashboard, LogIn, Shield, ExternalLink, ChevronRight, Settings } from 'lucide-react';
+import { User, Share2, Search, Zap, Terminal, Activity, Globe, Info, Cpu, Sparkles, Camera, Upload, Briefcase, Building2, MapPin, DollarSign, Bookmark, Heart, LayoutDashboard, LogIn, Shield, ExternalLink, ChevronRight, Settings, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
@@ -189,6 +189,7 @@ function App() {
   const [jobQuery, setJobQuery] = useState('');
   const [contentTopic, setContentTopic] = useState('');
   const [contentLength, setContentLength] = useState('medium');
+  const [geoLoc, setGeoLoc] = useState('');
   const [inmailContext, setInmailContext] = useState('');
 
   // Job Post States
@@ -347,6 +348,7 @@ function App() {
     { id: 'vault', icon: <LayoutDashboard />, label: 'My profile', hint: 'Your identity, saved assets, and neural activities.' },
     { id: 'recruit', icon: <Building2 />, label: 'Deploy job', hint: 'Corporate access to post new career opportunities.' },
     { id: 'content', icon: <Zap />, label: 'Blog generator', hint: 'Generate professional long-form neural blogs.' },
+    { id: 'geo', icon: <Map />, label: 'Geo-Sync', hint: 'Map neural sectors and physical grid locations.' },
   ];
 
   const renderResult = () => {
@@ -478,6 +480,50 @@ function App() {
                 ))}
              </div>
            </div>
+        </div>
+      );
+    }
+
+    if (result.type === 'geo') {
+      const zoom = 13;
+      const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${result.lon-0.01}%2C${result.lat-0.01}%2C${result.lon+0.01}%2C${result.lat+0.01}&layer=mapnik&marker=${result.lat}%2C${result.lon}`;
+      
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <h3 className="text-xl font-black text-white tracking-tighter uppercase flex items-center gap-2">
+              <Map className="text-futuristic-cyan" /> Geo_Sync_Stream
+            </h3>
+            <span className="text-[10px] font-mono text-gray-500 uppercase">Lat: {result.lat.toFixed(4)} // Lon: {result.lon.toFixed(4)}</span>
+          </div>
+          
+          <div className="w-full h-[400px] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative group">
+             <iframe 
+               width="100%" 
+               height="100%" 
+               frameBorder="0" 
+               scrolling="no" 
+               marginHeight="0" 
+               marginWidth="0" 
+               src={osmUrl}
+               className="grayscale hover:grayscale-0 transition-all duration-1000"
+             ></iframe>
+             <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-[9px] font-mono text-futuristic-cyan uppercase tracking-widest pointer-events-none">
+                Live_Grid_Coord_Verified
+             </div>
+          </div>
+
+          <div className="bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5 space-y-4">
+             <div className="flex items-center gap-3">
+               <div className="p-2 bg-futuristic-cyan/20 rounded-lg">
+                 <Info size={16} className="text-futuristic-cyan" />
+               </div>
+               <h4 className="font-bold text-white uppercase tracking-tight">Intelligence_Report: {result.location}</h4>
+             </div>
+             <p className="text-sm text-blue-100/70 leading-relaxed italic">
+               "{result.description}"
+             </p>
+          </div>
         </div>
       );
     }
@@ -1214,35 +1260,23 @@ function App() {
                 </div>
               )}
 
-              {activeTab === 'content' && (
+              {activeTab === 'geo' && (
                 <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[9px] uppercase font-bold text-gray-500 ml-1">Blog Title</label>
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold text-gray-400 flex items-center gap-2"><MapPin size={12}/> Physical Grid Location</label>
                     <input 
-                      className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm outline-none focus:border-futuristic-cyan transition-all" 
-                      placeholder="e.g. Future of Neural Interfaces"
-                      value={contentTopic}
-                      onChange={(e) => setContentTopic(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm outline-none focus:border-futuristic-cyan transition-all"
+                      placeholder="e.g. Silicon Valley, Paris, Hive Hub 7"
+                      value={geoLoc}
+                      onChange={(e) => setGeoLoc(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] uppercase font-bold text-gray-500 ml-1">Length</label>
-                    <select 
-                      className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm outline-none focus:border-futuristic-cyan transition-all text-gray-300"
-                      value={contentLength}
-                      onChange={(e) => setContentLength(e.target.value)}
-                    >
-                      <option value="short">Short (300 words)</option>
-                      <option value="medium">Medium (600 words)</option>
-                      <option value="long">Long (1000 words)</option>
-                    </select>
-                  </div>
                   <button 
-                    onClick={() => handleAction('content', { content_type: 'blog', topic: contentTopic, length: contentLength })}
-                    className="w-full bg-gradient-to-r from-indigo-900 to-blue-900 text-white font-black py-4 rounded-xl transition-all font-mono text-[10px] uppercase tracking-widest hover:brightness-125"
-                    disabled={loading || !contentTopic}
+                    onClick={() => handleAction('geo/sync', { location: geoLoc })}
+                    className="w-full bg-white text-black font-black py-4 rounded-xl hover:bg-futuristic-cyan transition-all font-mono text-[10px] uppercase tracking-tighter"
+                    disabled={loading || !geoLoc}
                   >
-                    {loading ? <Activity className="animate-spin w-4 h-4 mx-auto" /> : 'GENERATE_BLOG_STREAM'}
+                    {loading ? <Activity className="animate-spin w-4 h-4 mx-auto" /> : 'INITIALIZE_GEOSYNC'}
                   </button>
                 </div>
               )}
