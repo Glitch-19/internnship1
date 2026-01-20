@@ -22,8 +22,8 @@ class LinkedInClone:
         self.db_path = "linkedin_data.db"
         self.network = nx.DiGraph()
         self._init_db()
-        self.seed_ceos()
-        self.seed_jobs()
+        # self.seed_ceos()
+        # self.seed_jobs()
 
     def _init_db(self):
         """Initializes the SQLite database."""
@@ -422,7 +422,8 @@ class LinkedInClone:
 
     def advanced_search(self, query, filters):
         """
-        Simulates an advanced search by checking the local database and asking Groq to suggest professionals.
+        Simulates an advanced search by checking the local database and asking Groq to synthesis 
+        professional intelligence for famous personalities or mock professionals.
         """
         print(f"--- Searching for: {query} with filters: {filters} ---")
         
@@ -431,7 +432,6 @@ class LinkedInClone:
         # 1. Search Local Database
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        # Expanded search across multiple columns
         cursor.execute("""
             SELECT name, headline, summary, experience, education, skills, photo_url, profile_markdown 
             FROM profiles 
@@ -453,45 +453,87 @@ class LinkedInClone:
                 "source": "local"
             })
 
-        # 2. Get AI results if we need more or as alternative
-        prompt = f"List 3-5 mock professionals matching '{query}' with filters: {filters}. Output as a JSON list of objects with 'name', 'headline', and 'location'."
+        # 2. Strategic Intelligence Synthesis (Famous Personalities or Market Mockups)
+        prompt = f"""
+        Search your internal knowledge (Internet Synthesis) for personalities matching: '{query}'.
+        If '{query}' is a famous personality, provide a comprehensive LinkedIn-style professional profile.
+        If not, suggest 3-5 mock professionals.
+        
+        Output MUST be a JSON object with a key "items" containing a list of profiles.
+        Each profile MUST have:
+        - name: Full Name
+        - headline: Current significant role or legacy
+        - summary: An EXHAUSTIVE, multi-paragraph professional narrative (at least 200 words) including their global impact and core philosophy.
+        - experience: A comprehensive, multi-paragraph chronological dossier of major roles, companies, and specific landmark achievements.
+        - education: Degrees, institutions, and notable academic honors.
+        - skills: A dense matrix of technical, leadership, and strategic expertise.
+        - photo_url: A high-quality public image URL if famous (prefer official Wikimedia Commons links), else 'https://ui-avatars.com/api/?name=' + encodedName
+        - markdown: A beautiful, ultra-detailed professional dossier of at least 1000 words. Use # for Title, ## for sections, and ### for specific career stages. Include exhaustive bullet points for achievements, key projects, leadership style, and industry contributions.
+        """
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a recruitment assistant. Output in valid JSON format."},
+                    {"role": "system", "content": "You are a professional profile synthesizer with access to global networking intelligence. Output valid JSON only."},
                     {"role": "user", "content": prompt}
                 ],
                 response_format={"type": "json_object"}
             )
-            ai_results = json.loads(response.choices[0].message.content)
-            if "items" in ai_results:
-                # Add AI results, avoid duplicates if they happen to have the same name as local
+            ai_data = json.loads(response.choices[0].message.content)
+            
+            if "items" in ai_data:
                 existing_names = [item["name"].lower() for item in results["items"]]
-                for item in ai_results["items"]:
+                for item in ai_data["items"]:
                     if item["name"].lower() not in existing_names:
-                        item["source"] = "ai"
+                        item["source"] = "neural_search"
+                        # Ensure photo_url is somewhat valid
+                        if not item.get("photo_url") or "ui-avatars" not in item.get("photo_url"):
+                            if "photo_url" not in item:
+                                item["photo_url"] = f"https://ui-avatars.com/api/?name={item['name'].replace(' ', '+')}&background=random"
                         results["items"].append(item)
-            elif isinstance(ai_results, list):
-                # Handle direct list response
-                for item in ai_results:
-                    item["source"] = "ai"
-                    results["items"].append(item)
-                    
+            
             return results
         except Exception as e:
-            print(f"Error in search: {e}")
-            return results if results["items"] else None
+            print(f"Error in neural search: {e}")
+            return results  # Return whatever we have (even if empty) instead of None
     def get_search_suggestions(self, query):
-        """Returns name, photo, and headline for autocomplete suggestions."""
+        """Returns name, photo, and headline for autocomplete suggestions, enriched with AI if local results are few."""
         if not query or len(query) < 1:
             return []
+            
+        # 1. Local Database Lookup
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT name, photo_url, headline, id FROM profiles WHERE name LIKE ? LIMIT 5", (f"%{query}%",))
         rows = cursor.fetchall()
         conn.close()
-        return [{"name": r[0], "photo_url": r[1], "headline": r[2], "id": r[3]} for r in rows]
+        
+        suggestions = [{"name": r[0], "photo_url": r[1], "headline": r[2], "id": r[3], "source": "local"} for r in rows]
+        
+        # 2. Add AI-driven personality anticipation if results are low
+        if len(suggestions) < 3:
+            prompt = f"Anticipate the full name of a famous professional or personality starting with or matching '{query}'. Suggest 3 names with their current likely headline. Output as JSON list with 'name' and 'headline'."
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": "You are a professional directory assistant. Output JSON only."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    response_format={"type": "json_object"}
+                )
+                ai_suggestions = json.loads(response.choices[0].message.content)
+                if "items" in ai_suggestions:
+                    for item in ai_suggestions["items"]:
+                        if not any(s["name"].lower() == item["name"].lower() for s in suggestions):
+                            item["photo_url"] = f"https://ui-avatars.com/api/?name={item['name'].replace(' ', '+')}&background=random"
+                            item["id"] = "ai_" + item["name"].replace(" ", "_")
+                            item["source"] = "ai"
+                            suggestions.append(item)
+            except:
+                pass
+                
+        return suggestions[:5]
     def sync_geo(self, location):
         """
         Retrieves extensive details about a place and generates neural intelligence reports.
@@ -570,6 +612,37 @@ class LinkedInClone:
             return response.choices[0].message.content
         except Exception as e:
             print(f"Error generating content: {e}")
+            return None
+
+    def generate_synthetic_job(self, title_hint):
+        """
+        Generates realistic synthetic job data based on a title hint.
+        """
+        print(f"--- Generating Synthetic Job: {title_hint} ---")
+        prompt = f"""
+        Generate realistic professional job details for a position related to '{title_hint}'.
+        Output MUST be in valid JSON format:
+        {{
+            "title": "Full job title",
+            "company": "Fictional but realistic tech company name",
+            "location": "Realistic tech hub city",
+            "salary_range": "Realistic salary range (e.g. $120k - $180k)",
+            "description": "Comprehensive 3-4 sentence role description"
+        }}
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a corporate recruitment AI. Output valid JSON only."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+            data = json.loads(response.choices[0].message.content)
+            return data
+        except Exception as e:
+            print(f"Error generating synthetic job: {e}")
             return None
 
 if __name__ == "__main__":

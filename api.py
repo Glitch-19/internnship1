@@ -59,14 +59,22 @@ class JobPostRequest(BaseModel):
     posted_by: str
     salary_range: str
 
+class SyntheticJobRequest(BaseModel):
+    title_hint: str
+
 class SaveItemRequest(BaseModel):
     user_id: str
     item_id: str
     item_type: str
     item_data: dict
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "active", "database": "connected"}
+
 @app.post("/api/profile")
 async def build_profile(
+    user_id: str = Form(...),
     name: str = Form(...),
     headline: str = Form(...),
     summary: str = Form(...),
@@ -84,7 +92,7 @@ async def build_profile(
         shutil.copyfileobj(photo.file, buffer)
     
     photo_url = f"http://localhost:8000/static/uploads/{file_name}"
-    user_id = name.lower().replace(" ", "_")
+    # Use the provided user_id instead of deriving from display name
     
     profile = clone.build_profile(user_id, name, photo_url, headline, summary, experience, education, skills)
     if not profile:
@@ -133,6 +141,13 @@ async def sync_geo(req: GeoSyncRequest):
 async def search_jobs(req: JobSearchRequest):
     results = clone.search_jobs(req.query)
     return {"items": results}
+
+@app.post("/api/jobs/generate")
+async def generate_job(req: SyntheticJobRequest):
+    data = clone.generate_synthetic_job(req.title_hint)
+    if not data:
+        raise HTTPException(status_code=500, detail="Synthetic job generation failed")
+    return data
 
 @app.post("/api/jobs/post")
 async def post_job(req: JobPostRequest):
