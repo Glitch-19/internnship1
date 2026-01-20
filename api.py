@@ -55,10 +55,20 @@ class JobPostRequest(BaseModel):
     posted_by: str
     salary_range: str
 
+class SaveItemRequest(BaseModel):
+    user_id: str
+    item_id: str
+    item_type: str
+    item_data: dict
+
 @app.post("/api/profile")
 async def build_profile(
     name: str = Form(...),
-    user_input: str = Form(...),
+    headline: str = Form(...),
+    summary: str = Form(...),
+    experience: str = Form(...),
+    education: str = Form(...),
+    skills: str = Form(...),
     photo: UploadFile = File(...)
 ):
     # Save the photo
@@ -72,7 +82,7 @@ async def build_profile(
     photo_url = f"http://localhost:8000/static/uploads/{file_name}"
     user_id = name.lower().replace(" ", "_")
     
-    profile = clone.build_profile(user_id, name, photo_url, user_input)
+    profile = clone.build_profile(user_id, name, photo_url, headline, summary, experience, education, skills)
     if not profile:
         raise HTTPException(status_code=500, detail="Failed to generate profile")
     return profile
@@ -97,7 +107,10 @@ async def search(req: SearchRequest):
     if not results:
         raise HTTPException(status_code=500, detail="Search failed")
     return results
-
+@app.get("/api/search/suggestions")
+async def search_suggestions(q: str):
+    results = clone.get_search_suggestions(q)
+    return results
 @app.post("/api/content")
 async def generate_content(req: ContentRequest):
     content = clone.generate_content(req.content_type, req.topic)
@@ -123,6 +136,18 @@ async def post_job(req: JobPostRequest):
     if not success:
         raise HTTPException(status_code=500, detail="Job posting failed")
     return {"status": "success", "message": "Job posted successfully"}
+
+@app.post("/api/vault/save")
+async def save_to_vault(req: SaveItemRequest):
+    success = clone.save_item(req.user_id, req.item_id, req.item_type, req.item_data)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save item")
+    return {"status": "success"}
+
+@app.get("/api/vault/{user_id}")
+async def get_vault(user_id: str):
+    vault = clone.get_vault(user_id)
+    return vault
 
 if __name__ == "__main__":
     import uvicorn
