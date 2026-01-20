@@ -485,44 +485,61 @@ function App() {
     }
 
     if (result.type === 'geo') {
-      const zoom = 13;
-      const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${result.lon-0.01}%2C${result.lat-0.01}%2C${result.lon+0.01}%2C${result.lat+0.01}&layer=mapnik&marker=${result.lat}%2C${result.lon}`;
-      
       return (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-white/10 pb-4">
-            <h3 className="text-xl font-black text-white tracking-tighter uppercase flex items-center gap-2">
-              <Map className="text-futuristic-cyan" /> Geo_Sync_Stream
-            </h3>
-            <span className="text-[10px] font-mono text-gray-500 uppercase">Lat: {result.lat.toFixed(4)} // Lon: {result.lon.toFixed(4)}</span>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom duration-700">
+          <div className="flex items-center justify-between border-b border-white/10 pb-6">
+            <div className="space-y-1">
+              <h3 className="text-3xl font-black text-white tracking-tighter uppercase flex items-center gap-3">
+                <MapPin className="text-futuristic-cyan w-8 h-8" /> {result.location}
+              </h3>
+              <p className="text-[10px] font-mono text-futuristic-cyan/60 uppercase tracking-[0.3em]">Neural_Geospatial_Intelligence_Report</p>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] font-mono text-gray-500 block uppercase">Grid_Coords:</span>
+              <span className="text-xs font-mono text-blue-400 font-bold">{result.lat.toFixed(4)}N / {result.lon.toFixed(4)}E</span>
+            </div>
           </div>
           
-          <div className="w-full h-[400px] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative group">
-             <iframe 
-               width="100%" 
-               height="100%" 
-               frameBorder="0" 
-               scrolling="no" 
-               marginHeight="0" 
-               marginWidth="0" 
-               src={osmUrl}
-               className="grayscale hover:grayscale-0 transition-all duration-1000"
-             ></iframe>
-             <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-[9px] font-mono text-futuristic-cyan uppercase tracking-widest pointer-events-none">
-                Live_Grid_Coord_Verified
-             </div>
+          <div className="p-6 bg-futuristic-cyan/5 border border-futuristic-cyan/20 rounded-3xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+              <Activity className="w-24 h-24 text-futuristic-cyan" />
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-futuristic-cyan/20 rounded-2xl shrink-0">
+                <Shield size={20} className="text-futuristic-cyan" />
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-mono text-futuristic-cyan uppercase tracking-widest font-bold">Encapsulated_Summary</h4>
+                <p className="text-sm text-blue-50 font-medium italic leading-relaxed">
+                  "{result.summary}"
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5 space-y-4">
-             <div className="flex items-center gap-3">
-               <div className="p-2 bg-futuristic-cyan/20 rounded-lg">
-                 <Info size={16} className="text-futuristic-cyan" />
-               </div>
-               <h4 className="font-bold text-white uppercase tracking-tight">Intelligence_Report: {result.location}</h4>
+          <div className="prose prose-invert max-w-none pt-4">
+            <div className="bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5 shadow-2xl relative">
+              <div className="absolute -top-3 left-8 px-4 py-1 bg-black border border-white/10 rounded-full text-[8px] font-mono text-gray-500 uppercase tracking-widest font-bold">
+                Detailed_Analysis_v1.0.4
+              </div>
+              <div className="prose-h1:text-xl prose-h1:font-black prose-h1:tracking-tighter prose-h1:uppercase prose-h1:text-white
+                            prose-h2:text-lg prose-h2:font-black prose-h2:tracking-tight prose-h2:uppercase prose-h2:text-futuristic-cyan
+                            prose-p:text-sm prose-p:text-blue-100/80 prose-p:leading-relaxed
+                            prose-li:text-sm prose-li:text-gray-300">
+                <ReactMarkdown>{result.report}</ReactMarkdown>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="p-4 bg-black/40 border border-white/5 rounded-2xl flex items-center justify-between group cursor-help">
+                <span className="text-[9px] font-mono text-gray-600 uppercase tracking-widest">Network_Density</span>
+                <span className="text-xs font-black text-green-400 uppercase tracking-tighter">OPTIMAL</span>
              </div>
-             <p className="text-sm text-blue-100/70 leading-relaxed italic">
-               "{result.description}"
-             </p>
+             <div className="p-4 bg-black/40 border border-white/5 rounded-2xl flex items-center justify-between group cursor-help">
+                <span className="text-[9px] font-mono text-gray-600 uppercase tracking-widest">Economic_Status</span>
+                <span className="text-xs font-black text-blue-400 uppercase tracking-tighter">HIGH_VALUE</span>
+             </div>
           </div>
         </div>
       );

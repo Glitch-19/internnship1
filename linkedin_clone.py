@@ -494,16 +494,24 @@ class LinkedInClone:
         return [{"name": r[0], "photo_url": r[1], "headline": r[2], "id": r[3]} for r in rows]
     def sync_geo(self, location):
         """
-        Retrieves details about a place and generates neural grid coordinates.
+        Retrieves extensive details about a place and generates neural intelligence reports.
         """
         print(f"--- Synchronizing Geo-Location: {location} ---")
         prompt = f"""
-        Provide detailed professional information about '{location}'. 
+        Provide a comprehensive professional and technical intelligence report about '{location}'. 
+        Include:
+        1. Key industries and major tech hubs.
+        2. Economic significance and infrastructure.
+        3. Professional networking opportunities and major companies headquartered there.
+        4. Notable landmarks and cultural professional atmosphere.
+        5. Future growth prospects for tech workers.
+
         Also, provide its approximate latitude and longitude coordinates.
         Output MUST be in valid JSON format:
         {{
             "location": "{location}",
-            "description": "2-3 sentences about its professional or tech significance",
+            "summary": "1 sentence brief summary",
+            "report": "A detailed multi-paragraph report formatted in Markdown (using # for headers, bullet points, etc.)",
             "lat": float,
             "lon": float
         }}
@@ -512,16 +520,24 @@ class LinkedInClone:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a geospatial neural assistant. Output valid JSON only."},
+                    {"role": "system", "content": "You are a geospatial neural intelligence agent. Output valid JSON only. Provide deep, professional insights."},
                     {"role": "user", "content": prompt}
                 ],
                 response_format={"type": "json_object"}
             )
-            data = json.loads(response.choices[0].message.content)
+            raw_content = response.choices[0].message.content
+            data = json.loads(raw_content)
+            
+            # Handle cases where the model might wrap the object in a list
+            if isinstance(data, list):
+                data = data[0]
+                
             data["type"] = "geo"
             return data
         except Exception as e:
             print(f"Error in geo sync: {e}")
+            if 'raw_content' in locals():
+                print(f"Raw response was: {raw_content}")
             return None
 
     def generate_content(self, content_type, topic, length=None):
