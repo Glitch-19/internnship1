@@ -43,6 +43,7 @@ class SearchRequest(BaseModel):
 class ContentRequest(BaseModel):
     content_type: str
     topic: str
+    length: str = None
 
 class JobSearchRequest(BaseModel):
     query: str
@@ -113,7 +114,7 @@ async def search_suggestions(q: str):
     return results
 @app.post("/api/content")
 async def generate_content(req: ContentRequest):
-    content = clone.generate_content(req.content_type, req.topic)
+    content = clone.generate_content(req.content_type, req.topic, req.length)
     if not content:
         raise HTTPException(status_code=500, detail="Content generation failed")
     return {"content": content}

@@ -188,6 +188,7 @@ function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [jobQuery, setJobQuery] = useState('');
   const [contentTopic, setContentTopic] = useState('');
+  const [contentLength, setContentLength] = useState('medium');
   const [inmailContext, setInmailContext] = useState('');
 
   // Job Post States
@@ -345,7 +346,7 @@ function App() {
     { id: 'jobs', icon: <Briefcase />, label: 'Search jobs', hint: 'Search and apply for high-level neural positions.' },
     { id: 'vault', icon: <LayoutDashboard />, label: 'My profile', hint: 'Your identity, saved assets, and neural activities.' },
     { id: 'recruit', icon: <Building2 />, label: 'Deploy job', hint: 'Corporate access to post new career opportunities.' },
-    { id: 'content', icon: <Zap />, label: 'Post generator', hint: 'Generate viral posts and engagement loops.' },
+    { id: 'content', icon: <Zap />, label: 'Blog generator', hint: 'Generate professional long-form neural blogs.' },
   ];
 
   const renderResult = () => {
@@ -431,6 +432,34 @@ function App() {
               </div>
            </div>
 
+           {/* Blogs Section */}
+           {result.saved_content && result.saved_content.length > 0 && (
+             <div className="pt-8 space-y-6">
+               <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                 <h4 className="text-xs font-mono text-gray-400 uppercase tracking-widest flex items-center gap-2 font-bold"><Zap size={14} className="text-yellow-500" /> Stored_Intelligence (Blogs)</h4>
+                 <span className="text-[9px] font-mono text-gray-600">COUNT: {result.saved_content.length}</span>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {result.saved_content.map((blog, i) => (
+                   <motion.div 
+                     whileHover={{ scale: 1.01 }}
+                     key={i} 
+                     onClick={() => setResult({ content: blog.content })}
+                     className="p-6 bg-white/[0.03] border border-white/10 rounded-3xl hover:border-yellow-500/30 cursor-pointer transition-all group"
+                   >
+                     <div className="flex justify-between items-start mb-2">
+                       <h5 className="text-sm font-black text-white group-hover:text-yellow-500 transition-colors uppercase tracking-tight">{blog.name}</h5>
+                       <Zap size={12} className="text-yellow-500 opacity-50" />
+                     </div>
+                     <p className="text-[10px] text-gray-500 font-mono line-clamp-2 italic">
+                       {blog.content.substring(0, 100)}...
+                     </p>
+                   </motion.div>
+                 ))}
+               </div>
+             </div>
+           )}
+
            {/* Activities Section in Dashboard */}
            <div className="pt-8 space-y-6">
              <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -479,7 +508,34 @@ function App() {
     }
 
     if (typeof result.message === 'string') return <div className="prose prose-invert max-w-none text-blue-100"><ReactMarkdown>{result.message}</ReactMarkdown></div>;
-    if (typeof result.content === 'string') return <div className="prose prose-invert max-w-none text-blue-100"><ReactMarkdown>{result.content}</ReactMarkdown></div>;
+    if (typeof result.content === 'string') {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <h3 className="text-xl font-black text-white tracking-tighter uppercase flex items-center gap-2">
+              <Zap className="text-futuristic-cyan" /> Generated_Content
+            </h3>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => saveToVault({ name: contentTopic, content: result.content }, 'content')}
+                className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold rounded-xl hover:bg-yellow-500/20 transition-all flex items-center gap-2"
+              >
+                <Bookmark size={12} /> SAVE_TO_VAULT
+              </button>
+              <button 
+                onClick={() => handleAction('content', { content_type: 'blog', topic: contentTopic, length: contentLength })}
+                className="px-4 py-2 bg-white/5 border border-white/10 text-white text-[10px] font-bold rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"
+              >
+                <Activity size={12} className={loading ? 'animate-spin' : ''} /> REGENERATE
+              </button>
+            </div>
+          </div>
+          <div className="prose prose-invert max-w-none text-blue-100 bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5 shadow-inner">
+            <ReactMarkdown>{result.content}</ReactMarkdown>
+          </div>
+        </div>
+      );
+    }
 
     if (result.items && Array.isArray(result.items)) {
       // Check if it's a job result by checking fields of the first item
@@ -709,6 +765,10 @@ function App() {
                   <p className="text-[8px] font-mono text-gray-500 uppercase">Jobs</p>
                   <p className="text-sm font-bold text-white">{vaultData?.saved_jobs?.length || 0}</p>
                 </div>
+                <div className="bg-white/5 rounded-xl p-2 border border-white/5 text-center col-span-2">
+                  <p className="text-[8px] font-mono text-gray-500 uppercase">Stored_Intel (Blogs)</p>
+                  <p className="text-sm font-bold text-white">{vaultData?.saved_content?.length || 0}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -855,7 +915,7 @@ function App() {
                     className="w-full flex justify-center items-center gap-2 bg-gradient-to-r from-blue-700 to-blue-500 hover:brightness-125 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all font-mono text-xs uppercase"
                     disabled={loading || !userName || !photoFile}
                   >
-                    {loading ? <Activity className="animate-spin w-4 h-4" /> : 'STAGE_FOR_SYNTHESIS'}
+                    {loading ? <Activity className="animate-spin w-4 h-4" /> : 'review profile'}
                   </button>
                 </div>
               )}
@@ -1156,18 +1216,33 @@ function App() {
 
               {activeTab === 'content' && (
                 <div className="space-y-4">
-                  <input 
-                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm outline-none" 
-                    placeholder="Pulse Topic..."
-                    value={contentTopic}
-                    onChange={(e) => setContentTopic(e.target.value)}
-                  />
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase font-bold text-gray-500 ml-1">Blog Title</label>
+                    <input 
+                      className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm outline-none focus:border-futuristic-cyan transition-all" 
+                      placeholder="e.g. Future of Neural Interfaces"
+                      value={contentTopic}
+                      onChange={(e) => setContentTopic(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase font-bold text-gray-500 ml-1">Length</label>
+                    <select 
+                      className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm outline-none focus:border-futuristic-cyan transition-all text-gray-300"
+                      value={contentLength}
+                      onChange={(e) => setContentLength(e.target.value)}
+                    >
+                      <option value="short">Short (300 words)</option>
+                      <option value="medium">Medium (600 words)</option>
+                      <option value="long">Long (1000 words)</option>
+                    </select>
+                  </div>
                   <button 
-                    onClick={() => handleAction('content', { content_type: 'post', topic: contentTopic })}
-                    className="w-full bg-gradient-to-r from-indigo-900 to-blue-900 text-white font-bold py-4 rounded-xl transition-all font-mono text-xs"
-                    disabled={loading}
+                    onClick={() => handleAction('content', { content_type: 'blog', topic: contentTopic, length: contentLength })}
+                    className="w-full bg-gradient-to-r from-indigo-900 to-blue-900 text-white font-black py-4 rounded-xl transition-all font-mono text-[10px] uppercase tracking-widest hover:brightness-125"
+                    disabled={loading || !contentTopic}
                   >
-                    {loading ? <Activity className="animate-spin w-4 h-4" /> : 'BROADCAST_LOOP'}
+                    {loading ? <Activity className="animate-spin w-4 h-4 mx-auto" /> : 'GENERATE_BLOG_STREAM'}
                   </button>
                 </div>
               )}

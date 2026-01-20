@@ -398,6 +398,7 @@ class LinkedInClone:
         vault = {
             "saved_jobs": [],
             "saved_profiles": [],
+            "saved_content": [],
             "own_profile": None
         }
         
@@ -413,8 +414,10 @@ class LinkedInClone:
             item_data = json.loads(row[1])
             if item_type == "job":
                 vault["saved_jobs"].append(item_data)
-            else:
+            elif item_type == "profile":
                 vault["saved_profiles"].append(item_data)
+            elif item_type == "content":
+                vault["saved_content"].append(item_data)
         return vault
 
     def advanced_search(self, query, filters):
@@ -489,16 +492,24 @@ class LinkedInClone:
         rows = cursor.fetchall()
         conn.close()
         return [{"name": r[0], "photo_url": r[1], "headline": r[2], "id": r[3]} for r in rows]
-    def generate_content(self, content_type, topic):
+    def generate_content(self, content_type, topic, length=None):
         """
-        Generates LinkedIn content like posts, polls, newsletters, or event descriptions.
+        Generates LinkedIn content like posts, polls, newsletters, blogs, or event descriptions.
         """
         print(f"--- Generating {content_type} about {topic} ---")
+        blog_length_map = {
+            "short": "approx 300 words",
+            "medium": "approx 600 words",
+            "long": "approx 1000 words"
+        }
+        actual_length = blog_length_map.get(length, "approx 500 words")
+
         prompts = {
             "post": f"Write an engaging LinkedIn post about {topic}. Include relevant hashtags.",
             "poll": f"Create a LinkedIn poll about {topic} with 4 options to drive engagement.",
             "newsletter": f"Draft the introductory edition of a professional newsletter on {topic}.",
-            "event": f"Provide a title, description, and agenda for a virtual LinkedIn event on {topic}."
+            "event": f"Provide a title, description, and agenda for a virtual LinkedIn event on {topic}.",
+            "blog": f"Write a detailed, professional blog post titled '{topic}'. The length should be {actual_length}. Use Markdown for formatting with clear headings and a concluding summary."
         }
         
         target_prompt = prompts.get(content_type, prompts["post"])
