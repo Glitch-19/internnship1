@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { User, Share2, Search, Zap, Terminal, Activity, Globe, Info, Cpu, Sparkles, Camera, Upload, Briefcase, Building2, MapPin, DollarSign, Bookmark, Heart, LayoutDashboard, LogIn, Shield, ExternalLink, ChevronRight, Settings, Map, UserPlus } from 'lucide-react';
+import { User, Share2, Search, Zap, Terminal, Activity, Globe, Info, Cpu, Sparkles, Camera, Upload, Briefcase, Building2, MapPin, DollarSign, Bookmark, Heart, LayoutDashboard, LogIn, Shield, ExternalLink, ChevronRight, Settings, Map, UserPlus, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
@@ -657,11 +657,62 @@ function App() {
               <div className="p-3 bg-blue-100 rounded-2xl shrink-0">
                 <Shield size={20} className="text-blue-600" />
               </div>
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-mono text-blue-600 uppercase tracking-widest font-bold">Encapsulated_Summary</h4>
-                <p className="text-sm text-slate-800 font-medium italic leading-relaxed">
-                  "{result.summary}"
-                </p>
+              <div className="space-y-4 w-full">
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-mono text-blue-600 uppercase tracking-widest font-bold">Encapsulated_Summary</h4>
+                  <p className="text-sm text-slate-800 font-medium italic leading-relaxed">
+                    "{result.summary}"
+                  </p>
+                </div>
+
+                {result.place_details && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-blue-100 mt-2">
+                    {result.place_details.address && (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg border border-blue-100">
+                          <MapPin size={14} className="text-blue-600" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[8px] font-mono text-gray-400 uppercase font-bold">Physical_Location</p>
+                          <p className="text-xs text-slate-700 font-semibold">{result.place_details.address}</p>
+                        </div>
+                      </div>
+                    )}
+                    {result.place_details.phone && (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg border border-blue-100">
+                          <Phone size={14} className="text-blue-600" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[8px] font-mono text-gray-400 uppercase font-bold">Neutral_Contact</p>
+                          <p className="text-xs text-slate-700 font-semibold">{result.place_details.phone}</p>
+                        </div>
+                      </div>
+                    )}
+                    {result.place_details.website && (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg border border-blue-100">
+                          <Globe size={14} className="text-blue-600" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[8px] font-mono text-gray-400 uppercase font-bold">Digital_Focal_Point</p>
+                          <a href={result.place_details.website.startsWith('http') ? result.place_details.website : `https://${result.place_details.website}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline font-semibold">{result.place_details.website}</a>
+                        </div>
+                      </div>
+                    )}
+                    {result.place_details.category && (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg border border-blue-100">
+                          <Building2 size={14} className="text-blue-600" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[8px] font-mono text-gray-400 uppercase font-bold">Entity_Classification</p>
+                          <p className="text-xs text-slate-700 font-semibold">{result.place_details.category}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

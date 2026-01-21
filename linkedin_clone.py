@@ -595,23 +595,37 @@ class LinkedInClone:
     def sync_geo(self, location):
         """
         Retrieves extensive details about a place and generates neural intelligence reports.
+        Focuses on specific institutions or localized places if identified.
         """
         print(f"--- Synchronizing Geo-Location: {location} ---")
         prompt = f"""
-        Provide a comprehensive professional and technical intelligence report about '{location}'. 
-        Include:
+        Provide a comprehensive professional, technical, and geospatial intelligence report about '{location}'. 
+        If '{location}' is a specific institution (like a college, office, or building), focus SOLELY on that exact place. Do not provide a generic city report unless '{location}' is just a city name.
+        
+        Mandatory details to include for a specific place/institution:
+        1. Exact location/Full Address.
+        2. Contact information (Phone number, Email if known).
+        3. Key departments or focal points of this place.
+        4. Reputation and significance in its professional grid.
+        5. Specific infrastructure and amenities available at this exact site.
+        
+        If it's a city/region:
         1. Key industries and major tech hubs.
-        2. Economic significance and infrastructure.
-        3. Professional networking opportunities and major companies headquartered there.
-        4. Notable landmarks and cultural professional atmosphere.
-        5. Future growth prospects for tech workers.
+        2. Professional networking opportunities.
+        3. Future growth prospects.
 
         Also, provide its approximate latitude and longitude coordinates.
         Output MUST be in valid JSON format:
         {{
             "location": "{location}",
-            "summary": "1 sentence brief summary",
-            "report": "A detailed multi-paragraph report formatted in Markdown (using # for headers, bullet points, etc.)",
+            "summary": "A 1-sentence highly specific brief summary of this exact place/institution",
+            "place_details": {{
+                "address": "Full physical address",
+                "phone": "Official contact number",
+                "website": "Official URL",
+                "category": "e.g., Educational Institution, Tech Park, Corporate HQ"
+            }},
+            "report": "A detailed multi-paragraph intelligence report formatted in Markdown (using # for headers, bullet points, etc.), focusing specifically on the unique attributes of '{location}'.",
             "lat": float,
             "lon": float
         }}
@@ -620,7 +634,7 @@ class LinkedInClone:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a geospatial neural intelligence agent. Output valid JSON only. Provide deep, professional insights."},
+                    {"role": "system", "content": "You are a highly specific neural geospatial intelligence agent. You specialize in providing deep, localized data about specific institutions and landmarks. Output valid JSON only."},
                     {"role": "user", "content": prompt}
                 ],
                 response_format={"type": "json_object"}
