@@ -23,7 +23,7 @@ class LinkedInClone:
         self.network = nx.DiGraph()
         self._init_db()
         # self.seed_ceos()
-        # self.seed_jobs()
+        self.seed_jobs()
 
     def _init_db(self):
         """Initializes the SQLite database."""
@@ -60,7 +60,9 @@ class LinkedInClone:
                 location TEXT,
                 description TEXT,
                 posted_by TEXT,
-                salary_range TEXT
+                salary_range TEXT,
+                qualifications TEXT,
+                level TEXT
             )
         ''')
         cursor.execute('''
@@ -165,13 +167,42 @@ class LinkedInClone:
         conn.close()
 
     def seed_jobs(self):
-        """Seeds the database with some sample job listings."""
+        """Seeds the database with some sample job listings matching Google Careers style."""
         jobs = [
-            ("AI Research Scientist", "OpenAI", "San Francisco, CA", "Leading research on large language models.", "Elon Musk", "$250k - $500k"),
-            ("Senior Software Engineer", "Tesla", "Austin, TX", "Working on Autopilot and full self-driving systems.", "Elon Musk", "$180k - $250k"),
-            ("Cloud Architect", "Microsoft", "Seattle, WA", "Designing next-gen Azure infrastructure.", "Satya Nadella", "$200k - $300k"),
-            ("Product Manager", "Google", "Mountain View, CA", "Leading Google Search innovation.", "Sundar Pichai", "$190k - $280k"),
-            ("GPU Kernel Engineer", "NVIDIA", "Santa Clara, CA", "Optimizing CUDA kernels for AI workloads.", "Jensen Huang", "$220k - $350k")
+            (
+                "Third Party Data Center Operations Area Manager", 
+                "Google", 
+                "Singapore; Tokyo, Japan; +1 more", 
+                "Managing large scale data center operations.", 
+                "Sundar Pichai", 
+                "$150k - $220k",
+                "Bachelor's degree in a technical field or equivalent practical experience.|10 years of experience managing technical teams...|5 years of experience in a data center or critical facilities environment.",
+                "Advanced"
+            ),
+            (
+                "Cloud Security Product Data Scientist", 
+                "Google", 
+                "New York, NY, USA", 
+                "Using analytics to solve product or business problems.", 
+                "Sundar Pichai", 
+                "$140k - $190k",
+                "Bachelor's degree in Statistics, Mathematics, Data Science, Engineering, Physics, Economics...|8 years of work experience using analytics to solve product or business problems.",
+                "Mid"
+            ),
+            (
+                "Group Product Manager, Google Beam", 
+                "Google", 
+                "Mountain View, CA, USA; Seattle, WA, USA; +1 more", 
+                "Leading product management for next-gen beam tech.", 
+                "Sundar Pichai", 
+                "$200k - $300k",
+                "Bachelor's degree or equivalent practical experience.|Experience in product management or related technical field.",
+                "Advanced"
+            ),
+            ("Senior AI Research Scientist", "OpenAI", "San Francisco, CA, USA", "Leading research on large language models.", "Elon Musk", "$250k - $500k", "PhD in CS or similar experience.|Proven track record in LLM research.", "Advanced"),
+            ("Software Engineer, Full Stack", "Tesla", "Austin, TX, USA", "Working on manufacturing software.", "Elon Musk", "$120k - $180k", "Bachelor's in CS.|3+ years experience in React/Python.", "Early"),
+            ("Director of Engineering", "Microsoft", "Redmond, WA, USA", "Leading large scale engineering teams.", "Satya Nadella", "$300k - $450k", "15+ years engineering experience.|Experience leading 100+ person teams.", "Director+"),
+            ("MLOps Engineer", "NVIDIA", "Santa Clara, CA, USA", "Optimizing AI pipelines.", "Jensen Huang", "$180k - $250k", "Strong background in CUDA.|Experience with Kubernetes.", "Mid")
         ]
         
         conn = sqlite3.connect(self.db_path)
@@ -179,21 +210,46 @@ class LinkedInClone:
         cursor.execute("SELECT COUNT(*) FROM jobs")
         if cursor.fetchone()[0] == 0:
             cursor.executemany('''
-                INSERT INTO jobs (title, company, location, description, posted_by, salary_range)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs (title, company, location, description, posted_by, salary_range, qualifications, level)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', jobs)
             conn.commit()
         conn.close()
 
-    def search_jobs(self, query):
-        """Search for job listings in the database."""
+    def search_jobs(self, query, filters=None):
+        """Search for job listings in the database with optional filters."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT title, company, location, description, posted_by, salary_range 
-            FROM jobs 
-            WHERE title LIKE ? OR company LIKE ? OR description LIKE ?
-        ''', (f"%{query}%", f"%{query}%", f"%{query}%"))
+        
+        base_query = "SELECT title, company, location, description, posted_by, salary_range, qualifications, level FROM jobs WHERE (title LIKE ? OR company LIKE ? OR description LIKE ?)"
+        params = [f"%{query}%", f"%{query}%", f"%{query}%"]
+        
+        if filters:
+            # Add Location filters
+            if filters.get('Locations') and len(filters['Locations']) > 0:
+                loc_conditions = []
+                for loc in filters['Locations']:
+                    loc_conditions.append("location LIKE ?")
+                    params.append(f"%{loc}%")
+                base_query += f" AND ({' OR '.join(loc_conditions)})"
+            
+            # Add Experience (Level) filters
+            if filters.get('Experience') and len(filters['Experience']) > 0:
+                lvl_conditions = []
+                for lvl in filters['Experience']:
+                    lvl_conditions.append("level LIKE ?")
+                    params.append(f"%{lvl}%")
+                base_query += f" AND ({' OR '.join(lvl_conditions)})"
+            
+            # Add Organization filters
+            if filters.get('Organizations') and len(filters['Organizations']) > 0:
+                org_conditions = []
+                for org in filters['Organizations']:
+                    org_conditions.append("company LIKE ?")
+                    params.append(f"%{org}%")
+                base_query += f" AND ({' OR '.join(org_conditions)})"
+            
+        cursor.execute(base_query, params)
         rows = cursor.fetchall()
         conn.close()
         
@@ -204,19 +260,21 @@ class LinkedInClone:
                 "location": r[2],
                 "description": r[3],
                 "posted_by": r[4],
-                "salary_range": r[5]
+                "salary_range": r[5],
+                "qualifications": r[6],
+                "level": r[7]
             } for r in rows
         ]
-    def post_job(self, title, company, location, description, posted_by, salary_range):
+    def post_job(self, title, company, location, description, posted_by, salary_range, qualifications=None, level=None):
         """Adds a new job listing to the database."""
         print(f"--- Posting job: {title} at {company} by {posted_by} ---")
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO jobs (title, company, location, description, posted_by, salary_range)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (title, company, location, description, posted_by, salary_range))
+                INSERT INTO jobs (title, company, location, description, posted_by, salary_range, qualifications, level)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (title, company, location, description, posted_by, salary_range, qualifications, level))
             conn.commit()
             conn.close()
             return True

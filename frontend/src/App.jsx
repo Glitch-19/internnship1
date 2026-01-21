@@ -187,6 +187,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [jobQuery, setJobQuery] = useState('');
+  const [jobSearchLoc, setJobSearchLoc] = useState('');
   const [contentTopic, setContentTopic] = useState('');
   const [contentLength, setContentLength] = useState('medium');
   const [geoLoc, setGeoLoc] = useState('');
@@ -200,6 +201,48 @@ function App() {
   const [jobSalary, setJobSalary] = useState('');
   const [showJobReview, setShowJobReview] = useState(false);
 
+  // UI State for Collapsible Filters
+  const [openFilters, setOpenFilters] = useState({
+    Locations: true,
+    Experience: true,
+    Degree: false,
+    JobTypes: false,
+    Organizations: false,
+    SortBy: false
+  });
+
+  const toggleFilterSection = (section) => {
+    setOpenFilters(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  // Filter States
+  const [selectedFilters, setSelectedFilters] = useState({
+    'Locations': [],
+    'Experience': [],
+    'Degree': [],
+    'JobTypes': [],
+    'Organizations': [],
+    'SortBy': ['Relevance']
+  });
+
+  const filterOptions = {
+    Locations: ['Singapore', 'Tokyo', 'New York', 'London', 'Mountain View', 'Seattle'],
+    Experience: ['Intern and Apprentice', 'Early', 'Mid', 'Advanced', 'Director+'],
+    Degree: ['Associate', 'Bachelor', 'Master', 'Doctorate'],
+    JobTypes: ['Full-time', 'Part-time', 'Contract', 'Temporary'],
+    Organizations: ['Google', 'YouTube', 'Cloud', 'DeepMind', 'Waze'],
+    SortBy: ['Relevance', 'Newest']
+  };
+
+  const toggleFilterValue = (section, value) => {
+    setSelectedFilters(prev => ({
+      ...prev,
+      [section]: prev[section].includes(value) 
+        ? prev[section].filter(v => v !== value) 
+        : [...prev[section], value]
+    }));
+  };
+
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('neural_user', currentUser);
@@ -208,10 +251,21 @@ function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (activeTab === 'vault' && vaultData) {
-      setResult(vaultData);
+    // Clear results when switching certain tabs to prevent cross-contamination
+    if (activeTab !== 'vault') {
+      setResult(null);
     }
-  }, [activeTab, vaultData]);
+    
+    if (activeTab === 'jobs') {
+      handleAction('jobs/search', { query: jobQuery, filters: selectedFilters });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'jobs') {
+      handleAction('jobs/search', { query: jobQuery, filters: selectedFilters });
+    }
+  }, [selectedFilters]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -814,7 +868,7 @@ function App() {
     }
 
     if (result.items && Array.isArray(result.items)) {
-      // Check if it's a job result by checking fields of the first item
+      // Check if it''s a job result by checking fields of the first item
       const isJobResult = result.items.length > 0 && 'salary_range' in result.items[0];
 
       if (isJobResult) {
@@ -825,14 +879,14 @@ function App() {
               <div key={i} className="group p-6 border border-slate-200 bg-white rounded-3xl hover:border-blue-500/50 hover:bg-slate-50 transition-all shadow-xl">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h4 className="font-bold text-xl text-slate-900 group-hover:text-blue-600 transition-colors">{job.title}</h4>
+                    <h4 className="font-bold text-xl text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{job.title}</h4>
                     <div className="flex items-center gap-3 mt-1 text-sm text-blue-600/80">
-                      <span className="flex items-center gap-1"><Building2 size={14} /> {job.company}</span>
-                      <span className="flex items-center gap-1 text-gray-400"><MapPin size={14} /> {job.location}</span>
+                      <span className="flex items-center gap-1 font-bold"><Building2 size={14} /> {job.company}</span>
+                      <span className="flex items-center gap-1 text-gray-400 font-mono"><MapPin size={14} /> {job.location}</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-mono bg-blue-500/10 text-blue-600 border border-blue-500/20 px-2 py-1 rounded-lg flex items-center gap-1">
+                    <span className="text-[10px] font-mono bg-blue-500/10 text-blue-600 border border-blue-500/20 px-2 py-1 rounded-lg flex items-center gap-1 font-black">
                       <DollarSign size={10} /> {job.salary_range}
                     </span>
                   </div>
@@ -844,7 +898,7 @@ function App() {
                       onClick={() => saveToVault(job, 'job')}
                       className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 text-[9px] font-bold rounded-lg hover:bg-yellow-500/20 transition-all uppercase flex items-center gap-1"
                     >
-                      <Bookmark size={10} /> SAVE_JOB
+                      <Bookmark size={10} /> SAVE_TO_VAULT
                     </button>
                     <button 
                       onClick={() => alert(`Direct neural application sent to ${job.company}!`)}
@@ -853,7 +907,7 @@ function App() {
                       SYNC_APPLICATION
                     </button>
                   </div>
-                  <span className="text-[9px] text-gray-400 font-mono uppercase">Posted_By: {job.posted_by}</span>
+                  <span className="text-[9px] text-gray-400 font-mono uppercase font-bold tracking-widest">Node_Origin: {job.posted_by}</span>
                 </div>
               </div>
             ))}
@@ -959,9 +1013,21 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center gap-6">
+          <div className="hidden md:flex gap-4">
+            {['profile', 'networking', 'search', 'jobs', 'vault'].map((id) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`text-[10px] font-bold uppercase tracking-widest px-3 py-2 rounded-lg transition-all ${
+                  activeTab === id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                {id}
+              </button>
+            ))}
+          </div>
           <div className="hidden sm:flex gap-6 text-[10px] font-mono text-gray-400 tracking-widest">
             <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-green-500" /> SYSTEM_ONLINE</span>
-            <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> GRID_ALPHA_STABLE</span>
           </div>
           {!isLoggedOut && (
             <button 
@@ -1017,10 +1083,12 @@ function App() {
         )}
       </AnimatePresence>
 
-      <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
-        <div className="lg:col-span-3 flex flex-col gap-6">
-          {/* User Profile Summary Card */}
-          <div className="glass-morphism p-6 rounded-3xl border border-slate-200 bg-white relative overflow-hidden group shadow-sm">
+      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 pb-20 px-6">
+        {activeTab !== 'jobs' ? (
+          <>
+            <div className="lg:col-span-3 flex flex-col gap-6">
+              {/* User Profile Summary Card */}
+              <div className="glass-morphism p-6 rounded-3xl border border-slate-200 bg-white relative overflow-hidden group shadow-sm">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all" />
             <div className="flex flex-col items-center text-center space-y-3 relative z-10">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-slate-200 p-0.5 border border-slate-200 group-hover:border-blue-500/50 transition-all">
@@ -1357,15 +1425,53 @@ function App() {
                       placeholder="Title, Company, or Keywords..."
                       value={jobQuery}
                       onChange={(e) => setJobQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAction('jobs/search', { query: jobQuery, filters: selectedFilters });
+                        }
+                      }}
                     />
                   </div>
+
+                  {/* Filters UI */}
+                  <div className="space-y-4 pt-2">
+                    <div className="flex flex-wrap gap-2">
+                      {filterOptions.Locations.map(loc => (
+                        <button
+                          key={loc}
+                          onClick={() => toggleFilterValue('Locations', loc)}
+                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${
+                            selectedFilters.Locations.includes(loc) 
+                              ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
+                              : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300'
+                          }`}
+                        >
+                          {loc}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <button 
-                    onClick={() => handleAction('jobs/search', { query: jobQuery })}
+                    onClick={() => handleAction('jobs/search', { query: jobQuery, filters: selectedFilters })}
                     className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 transition-all font-mono text-xs shadow-[0_0_15px_rgba(37,99,235,0.2)]"
                     disabled={loading}
                   >
                     {loading ? <Activity className="animate-spin w-4 h-4" /> : 'LOCATE_OPPORTUNITIES'}
                   </button>
+                  
+                  {(selectedFilters.Locations.length > 0 || jobQuery) && (
+                    <button 
+                      onClick={() => {
+                        setSelectedFilters({ Locations: [], Experience: [], JobTypes: [], Organizations: [] });
+                        setJobQuery('');
+                        handleAction('jobs/search', { query: '', filters: {} });
+                      }}
+                      className="w-full text-[9px] font-mono text-blue-600 uppercase tracking-widest hover:underline"
+                    >
+                      Reset_Filters
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1519,46 +1625,327 @@ function App() {
         </div>
 
         <div className="lg:col-span-5">
-          <div className="glass-morphism p-8 rounded-[2.5rem] border border-slate-200 min-h-[600px] flex flex-col bg-white shadow-sm">
-            <div className="flex items-center justify-between mb-8 text-[9px] font-mono text-gray-400 tracking-[0.4em] uppercase">
-              <h2 className="flex items-center gap-2"><Share2 className="text-blue-500 w-3 h-3" /> Output_Stream</h2>
-              <span>Buffer: 100%</span>
-            </div>
-            
-            <div className="flex-grow">
-              {!result && !loading && (
-                <div className="h-full flex flex-col items-center justify-center opacity-40 space-y-6">
-                  <Sparkles size={80} className="animate-spin-slow text-blue-600" />
-                  <p className="font-mono text-xs tracking-widest uppercase text-slate-700">System_Idling_Wait_For_Input</p>
-                </div>
-              )}
-
-              {loading && (
-                <div className="space-y-8 animate-pulse">
-                  <div className="h-10 bg-slate-100 rounded-2xl w-1/2"></div>
-                  <div className="space-y-4">
-                    <div className="h-40 bg-slate-100 rounded-[2rem]"></div>
-                    <div className="h-4 bg-slate-100 rounded-full w-full"></div>
-                    <div className="h-4 bg-slate-100 rounded-full w-3/4"></div>
+            <div className="glass-morphism p-8 rounded-[2.5rem] border border-slate-200 min-h-[600px] flex flex-col bg-white shadow-sm">
+              <div className="flex items-center justify-between mb-8 text-[9px] font-mono text-gray-400 tracking-[0.4em] uppercase">
+                <h2 className="flex items-center gap-2"><Share2 className="text-blue-500 w-3 h-3" /> Output_Stream</h2>
+                <span>Buffer: 100%</span>
+              </div>
+              
+              <div className="flex-grow">
+                {!result && !loading && (
+                  <div className="h-full flex flex-col items-center justify-center opacity-40 space-y-6">
+                    <Sparkles size={80} className="animate-spin-slow text-blue-600" />
+                    <p className="font-mono text-xs tracking-widest uppercase text-slate-700">System_Idling_Wait_For_Input</p>
                   </div>
-                </div>
-              )}
-
-              <AnimatePresence mode="wait">
-                {result && (
-                  <motion.div 
-                    key={loading ? 'loading' : 'done'}
-                    initial={{ opacity: 0, scale: 0.98 }} 
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="animate-in fade-in zoom-in duration-500 text-slate-900"
-                  >
-                    {renderResult()}
-                  </motion.div>
                 )}
-              </AnimatePresence>
+
+                {loading && (
+                  <div className="space-y-8 animate-pulse">
+                    <div className="h-10 bg-slate-100 rounded-2xl w-1/2"></div>
+                    <div className="space-y-4">
+                      <div className="h-40 bg-slate-100 rounded-[2rem]"></div>
+                      <div className="h-4 bg-slate-100 rounded-full w-full"></div>
+                      <div className="h-4 bg-slate-100 rounded-full w-3/4"></div>
+                    </div>
+                  </div>
+                )}
+
+                <AnimatePresence mode="wait">
+                  {result && (
+                    <motion.div 
+                      key={loading ? 'loading' : 'done'}
+                      initial={{ opacity: 0, scale: 0.98 }} 
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="animate-in fade-in zoom-in duration-500 text-slate-900"
+                    >
+                      {renderResult()}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
-        </div>
+        </>
+        ) : (
+          <div className="lg:col-span-12">
+            <div className="flex flex-col gap-6">
+              {/* Google Careers Style Search Header */}
+              <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
+                <div className="flex flex-col lg:flex-row gap-4 items-end">
+                  <div className="flex-[2] space-y-2 w-full">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">What</label>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600" size={18} />
+                      <input 
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-sm focus:border-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+                        placeholder="Job title, skills, or company"
+                        value={jobQuery}
+                        onChange={(e) => setJobQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAction('jobs/search', { query: jobQuery, filters: { ...selectedFilters, Locations: jobSearchLoc ? [...selectedFilters.Locations, jobSearchLoc] : selectedFilters.Locations } })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-2 w-full">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Where</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600" size={18} />
+                      <input 
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-sm focus:border-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+                        placeholder="City, state, or remote"
+                        value={jobSearchLoc}
+                        onChange={(e) => setJobSearchLoc(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAction('jobs/search', { query: jobQuery, filters: { ...selectedFilters, Locations: jobSearchLoc ? [...selectedFilters.Locations, jobSearchLoc] : selectedFilters.Locations } })}
+                      />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleAction('jobs/search', { query: jobQuery, filters: { ...selectedFilters, Locations: jobSearchLoc ? [...selectedFilters.Locations, jobSearchLoc] : selectedFilters.Locations } })}
+                    className="h-[56px] px-10 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 uppercase tracking-[0.1em] text-xs flex items-center gap-3"
+                  >
+                    {loading ? <Activity className="animate-spin" size={18} /> : <Search size={18} />}
+                    Search
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Filter Section (Left side - Google Style) */}
+                <aside className="lg:col-span-3 space-y-6 sticky top-4 order-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-xl font-bold text-slate-800 tracking-tight">
+                      {result?.items?.length || 0} jobs matched
+                    </h2>
+                    <button 
+                      onClick={() => {
+                        setSelectedFilters({ Locations: [], Experience: [], JobTypes: [], Organizations: [] });
+                        setJobQuery('');
+                        setJobSearchLoc('');
+                        handleAction('jobs/search', { query: '', filters: {} });
+                      }}
+                      className="text-blue-600 text-xs font-medium hover:underline"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+                       <input 
+                         className="w-full text-sm outline-none placeholder:text-slate-400"
+                         placeholder="What do you want to do?"
+                         value={jobQuery}
+                         onChange={(e) => setJobQuery(e.target.value)}
+                         onKeyDown={(e) => e.key === 'Enter' && handleAction('jobs/search', { query: jobQuery, filters: selectedFilters })}
+                       />
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-slate-200">
+                    {Object.keys(filterOptions).map((category) => (
+                      <div key={category} className="py-4">
+                        <button 
+                          onClick={() => toggleFilterSection(category)}
+                          className="w-full flex items-center justify-between group"
+                        >
+                          <span className="text-sm font-bold text-slate-700">{category}</span>
+                          <div className={`transition-transform ${openFilters[category] ? 'rotate-180' : ''}`}>
+                            <ChevronRight size={16} className="text-slate-400" />
+                          </div>
+                        </button>
+                        
+                        {category === 'Experience' && (
+                          <div className="mt-6 mb-2">
+                             <button className="w-full flex items-center justify-between pointer-events-none mb-4">
+                               <span className="text-sm font-bold text-slate-700">Skills and qualifications</span>
+                               <div className="bg-slate-200 p-1 rounded">
+                                 <ChevronRight size={14} className="rotate-90 text-slate-600" />
+                               </div>
+                             </button>
+                             <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+                                <input 
+                                  className="w-full text-xs outline-none placeholder:text-slate-400"
+                                  placeholder="Computer programming, finance degree, ..."
+                                />
+                             </div>
+                          </div>
+                        )}
+
+                        {openFilters[category] && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            className="space-y-3 mt-4"
+                          >
+                            {category === 'Locations' && (
+                              <div className="space-y-3">
+                                <div className="relative mb-2">
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                  <input 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pl-9 pr-3 text-xs outline-none focus:border-blue-500"
+                                    placeholder="Which location(s) do you prefer?"
+                                    value={jobSearchLoc}
+                                    onChange={(e) => setJobSearchLoc(e.target.value)}
+                                  />
+                                </div>
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                  <input 
+                                    type="checkbox"
+                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    checked={selectedFilters.Locations.includes('Remote')}
+                                    onChange={() => toggleFilterValue('Locations', 'Remote')}
+                                  />
+                                  <div className="flex items-center gap-2">
+                                     <span className="text-sm text-slate-600 font-medium">Remote eligible</span>
+                                     <Info size={14} className="text-slate-400" />
+                                  </div>
+                                </label>
+                              </div>
+                            )}
+
+                            {category === 'Experience' ? (
+                               <div className="grid grid-cols-2 gap-y-3">
+                                 {filterOptions[category].map(val => (
+                                    <label key={val} className="flex items-center gap-3 cursor-pointer group">
+                                      <input 
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        checked={selectedFilters[category].includes(val)}
+                                        onChange={() => toggleFilterValue(category, val)}
+                                      />
+                                      <span className="text-[11px] text-slate-600 group-hover:text-slate-900 transition-colors font-bold uppercase">{val.split(' ')[0]}</span>
+                                    </label>
+                                  ))}
+                               </div>
+                            ) : category === 'SortBy' ? (
+                               <div className="space-y-2">
+                                  {filterOptions[category].map(val => (
+                                    <label key={val} className="flex items-center gap-3 cursor-pointer">
+                                      <input 
+                                        type="radio"
+                                        name="sortby"
+                                        className="w-4 h-4 border-slate-300 text-blue-600"
+                                        checked={selectedFilters[category].includes(val)}
+                                        onChange={() => setSelectedFilters(prev => ({ ...prev, SortBy: [val] }))}
+                                      />
+                                      <span className="text-sm text-slate-600 uppercase font-medium">{val}</span>
+                                    </label>
+                                  ))}
+                               </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {filterOptions[category].map(val => (
+                                  <label key={val} className="flex items-center gap-3 cursor-pointer group">
+                                    <input 
+                                      type="checkbox"
+                                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                      checked={selectedFilters[category].includes(val)}
+                                      onChange={() => toggleFilterValue(category, val)}
+                                    />
+                                    <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors uppercase font-medium">{val}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </aside>
+
+                {/* Result Section (Right side - Google Style) */}
+                <div className="lg:col-span-9 space-y-6 order-2">
+                  <div className="flex items-center gap-4 text-sm font-medium text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div className="w-12 h-6 bg-slate-300 rounded-full relative p-1 flex items-center">
+                       <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                    <span>Turn on job alerts for this search</span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {!result && !loading && (
+                      <div className="bg-white border border-slate-200 rounded-[2.5rem] p-20 flex flex-col items-center justify-center text-center space-y-4 text-slate-400">
+                        <Briefcase size={64} />
+                        <h3 className="text-xl font-bold text-slate-800">No jobs to display</h3>
+                        <p className="max-w-xs">Adjust your filters or search keywords to see results from Google Careers.</p>
+                      </div>
+                    )}
+
+                    {loading && Array(3).fill(0).map((_, i) => (
+                      <div key={i} className="bg-white border border-slate-200 rounded-2xl p-8 space-y-6 animate-pulse">
+                        <div className="h-8 bg-slate-100 rounded w-1/2"></div>
+                        <div className="h-4 bg-slate-100 rounded w-1/3"></div>
+                        <div className="space-y-2">
+                           <div className="h-3 bg-slate-100 rounded w-full"></div>
+                           <div className="h-3 bg-slate-100 rounded w-full"></div>
+                           <div className="h-3 bg-slate-100 rounded w-4/5"></div>
+                        </div>
+                      </div>
+                    ))}
+
+                    <AnimatePresence mode="popLayout">
+                      {result?.items?.map((job, idx) => (
+                        <motion.div 
+                          key={idx}
+                          initial={{ opacity: 0, scale: 0.98 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: idx * 0.05 }}
+                          className="bg-white border border-slate-200 rounded-2xl p-8 hover:shadow-lg transition-all border-l-4 border-l-transparent hover:border-l-blue-600"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-4 flex-1">
+                              <h3 className="text-2xl font-bold text-slate-900 leading-tight">
+                                {job.title}
+                              </h3>
+                              
+                              <div className="flex flex-wrap items-center gap-6 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                                <span className="flex items-center gap-2"><Building2 size={16} /> {job.company}</span>
+                                <span className="flex items-center gap-2"><MapPin size={16} /> {job.location}</span>
+                                <span className="flex items-center gap-2"><Activity size={16} /> {job.level}</span>
+                                <span className="flex items-center gap-2 text-blue-600 cursor-help" title="Remote eligible if specified"><Info size={16} /> Advanced</span>
+                              </div>
+
+                              <div className="space-y-2 pt-4 border-t border-slate-100">
+                                <h4 className="text-sm font-bold text-slate-800">Minimum qualifications</h4>
+                                <ul className="space-y-2">
+                                  {(job.qualifications || "Bachelor's degree or equivalent practical experience.").split('|').map((q, i) => (
+                                    <li key={i} className="flex gap-2 text-sm text-slate-600 leading-relaxed">
+                                      <span className="text-slate-400">•</span>
+                                      {q}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors">
+                                <Share2 size={22} />
+                              </button>
+                              <button 
+                                onClick={() => saveToVault(job, 'job')}
+                                className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                                title="Save to Database Profile"
+                              >
+                                <Bookmark size={22} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mt-8">
+                            <button className="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-50 transition-all">
+                              Learn more
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <AnimatePresence>

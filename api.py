@@ -50,6 +50,7 @@ class GeoSyncRequest(BaseModel):
 
 class JobSearchRequest(BaseModel):
     query: str
+    filters: dict = None
 
 class JobPostRequest(BaseModel):
     title: str
@@ -58,6 +59,8 @@ class JobPostRequest(BaseModel):
     description: str
     posted_by: str
     salary_range: str
+    qualifications: str = None
+    level: str = None
 
 class SyntheticJobRequest(BaseModel):
     title_hint: str
@@ -139,8 +142,15 @@ async def sync_geo(req: GeoSyncRequest):
 
 @app.post("/api/jobs/search")
 async def search_jobs(req: JobSearchRequest):
-    results = clone.search_jobs(req.query)
-    return {"items": results}
+    try:
+        print(f"DEBUG: Search Query: {req.query}, Filters: {req.filters}")
+        results = clone.search_jobs(req.query, req.filters)
+        return {"items": results}
+    except Exception as e:
+        print(f"ERROR in search_jobs: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/jobs/generate")
 async def generate_job(req: SyntheticJobRequest):
@@ -157,7 +167,9 @@ async def post_job(req: JobPostRequest):
         req.location, 
         req.description, 
         req.posted_by, 
-        req.salary_range
+        req.salary_range,
+        req.qualifications,
+        req.level
     )
     if not success:
         raise HTTPException(status_code=500, detail="Job posting failed")
